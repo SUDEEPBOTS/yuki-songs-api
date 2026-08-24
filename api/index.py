@@ -16,7 +16,7 @@ from pydantic import BaseModel
 app = FastAPI(
     title="Free 5,000+ Music & Songs API",
     description="High-performance, ultra-fast free REST API with 5,700+ cached songs ready for direct audio/video streaming with built-in DDoS & Rate Limiting Protection.",
-    version="1.3.0",
+    version="1.4.0",
     docs_url="/swagger",
     redoc_url="/redoc"
 )
@@ -61,12 +61,17 @@ AVAILABLE_ENDPOINTS = {
     "docs": {
         "method": "GET",
         "path": "/docs",
-        "description": "Custom interactive API documentation & code playground"
+        "description": "Custom interactive API console, scratchpad & developer documentation"
     },
-    "swagger": {
+    "privacy": {
         "method": "GET",
-        "path": "/swagger",
-        "description": "Raw OpenAPI Swagger specification UI"
+        "path": "/privacy",
+        "description": "Privacy policy and zero-logs architecture"
+    },
+    "terms": {
+        "method": "GET",
+        "path": "/terms",
+        "description": "Terms of service and DMCA policy"
     }
 }
 
@@ -118,7 +123,6 @@ rate_limiter = SlidingWindowRateLimiter(DEFAULT_RATE_LIMIT)
 async def custom_headers_and_rate_limit_middleware(request: Request, call_next):
     start_time = time.time()
     
-    # Apply rate limiting to /api/* endpoints
     if request.url.path.startswith("/api/"):
         try:
             rate_limiter.check(request)
@@ -127,7 +131,7 @@ async def custom_headers_and_rate_limit_middleware(request: Request, call_next):
             headers = getattr(exc, "headers", {}) or {}
             headers.update({
                 "X-Powered-By": "Yuki-Music-Engine",
-                "X-API-Version": "1.3.0",
+                "X-API-Version": "1.4.0",
                 "X-Total-Songs": str(len(SONGS_DATA)),
                 "X-RateLimit-Limit": str(DEFAULT_RATE_LIMIT),
                 "X-RateLimit-Remaining": "0",
@@ -151,9 +155,8 @@ async def custom_headers_and_rate_limit_middleware(request: Request, call_next):
     response = await call_next(request)
     process_time = (time.time() - start_time) * 1000
     
-    # Inject Custom Headers on every response
     response.headers["X-Powered-By"] = "Yuki-Music-Engine"
-    response.headers["X-API-Version"] = "1.3.0"
+    response.headers["X-API-Version"] = "1.4.0"
     response.headers["X-Total-Songs"] = str(len(SONGS_DATA))
     response.headers["X-RateLimit-Limit"] = str(DEFAULT_RATE_LIMIT)
     response.headers["X-RateLimit-Remaining"] = str(rate_limiter.get_remaining(request))
@@ -361,10 +364,10 @@ async def landing_page():
             </div>
             <div class="flex items-center gap-3">
                 <a href="/docs" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 transition">
-                    <i class="fa-solid fa-book-bookmark mr-1.5 text-indigo-400"></i> API Docs
+                    <i class="fa-solid fa-code mr-1.5 text-indigo-400"></i> Interactive Docs
                 </a>
-                <a href="/swagger" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 transition">
-                    <i class="fa-solid fa-code mr-1.5 text-blue-400"></i> Swagger
+                <a href="/privacy" class="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white transition">
+                    Privacy
                 </a>
                 <a href="https://github.com" target="_blank" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition">
                     <i class="fa-brands fa-github mr-1.5"></i> GitHub
@@ -442,10 +445,10 @@ async def landing_page():
                     <h3 class="text-xl font-bold text-gray-100 flex items-center gap-2">
                         <i class="fa-solid fa-network-wired text-indigo-400"></i> API Endpoints Reference
                     </h3>
-                    <p class="text-xs text-gray-400 mt-1">All available REST API routes ready for integration with music bots and applications.</p>
+                    <p class="text-xs text-gray-400 mt-1">All available REST API routes with built-in interactive console.</p>
                 </div>
                 <a href="/docs" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold">
-                    Full Documentation & Examples <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    Open Live Scratchpad & Docs <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                 </a>
             </div>
 
@@ -456,7 +459,7 @@ async def landing_page():
                             <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
                             <code class="text-sm font-mono text-gray-200">/api/search?q={query}&limit={10}</code>
                         </div>
-                        <a href="/api/search?q=Sun%20Saathiya&limit=2" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium self-start sm:self-auto">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        <a href="/docs#console-search" class="px-3 py-1 rounded-lg text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 transition font-medium self-start sm:self-auto">Test in Scratchpad <i class="fa-solid fa-bolt text-[10px] ml-1"></i></a>
                     </div>
                     <p class="text-xs text-gray-400 mt-2">Search songs by keyword, title, or artist with token relevance ranking.</p>
                 </div>
@@ -467,7 +470,7 @@ async def landing_page():
                             <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
                             <code class="text-sm font-mono text-gray-200">/api/song/{video_id}</code>
                         </div>
-                        <a href="/api/song/UNs50T6EYwE" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium self-start sm:self-auto">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        <a href="/docs#console-song" class="px-3 py-1 rounded-lg text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 transition font-medium self-start sm:self-auto">Test in Scratchpad <i class="fa-solid fa-bolt text-[10px] ml-1"></i></a>
                     </div>
                     <p class="text-xs text-gray-400 mt-2">Get direct stream link and metadata for a specific YouTube 11-char Video ID.</p>
                 </div>
@@ -478,45 +481,23 @@ async def landing_page():
                             <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
                             <code class="text-sm font-mono text-gray-200">/api/random?limit={10}</code>
                         </div>
-                        <a href="/api/random?limit=5" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium self-start sm:self-auto">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        <a href="/docs#console-random" class="px-3 py-1 rounded-lg text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 transition font-medium self-start sm:self-auto">Test in Scratchpad <i class="fa-solid fa-bolt text-[10px] ml-1"></i></a>
                     </div>
                     <p class="text-xs text-gray-400 mt-2">Get a random playlist of songs (ideal for Music Bot shuffle & autoplay).</p>
-                </div>
-
-                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
-                            <code class="text-sm font-mono text-gray-200">/api/songs?page={1}&limit={50}</code>
-                        </div>
-                        <a href="/api/songs?page=1&limit=10" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium self-start sm:self-auto">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-2">Browse the complete 5,778+ songs database page-by-page.</p>
-                </div>
-
-                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
-                            <code class="text-sm font-mono text-gray-200">/api/stats</code>
-                        </div>
-                        <a href="/api/stats" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium self-start sm:self-auto">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-2">Returns server health status, song counts, and active rate limit settings.</p>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Footer -->
+    <!-- Footer with Privacy & Terms -->
     <footer class="border-t border-gray-800/80 py-6 text-center text-xs text-gray-500">
-        <div class="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-2">
+        <div class="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3">
             <p>© 2026 Free Songs API · Open Source Serverless Music Index</p>
             <div class="flex items-center gap-4">
+                <a href="/docs" class="hover:text-gray-300 font-semibold text-indigo-400">Interactive Docs</a>
+                <a href="/privacy" class="hover:text-gray-300">Privacy Policy</a>
+                <a href="/terms" class="hover:text-gray-300">Terms of Service & DMCA</a>
                 <a href="/api/stats" class="hover:text-gray-300">API Stats</a>
-                <a href="/docs" class="hover:text-gray-300">Docs</a>
-                <a href="/swagger" class="hover:text-gray-300">Swagger</a>
-                <a href="/api/random" class="hover:text-gray-300">Random</a>
             </div>
         </div>
     </footer>
@@ -644,17 +625,17 @@ async def landing_page():
 """
     return HTMLResponse(content=html_content)
 
-# ── Custom /docs Interactive Documentation Page ──────────────────────────────
+# ── Custom /docs Interactive Scratchpad & API Console ────────────────────────
 @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)
 async def custom_docs_page(request: Request):
-    """Serves the Custom Interactive API Documentation Page with Code Snippets & Live Tester"""
+    """Serves the Custom Interactive API Documentation Page with Live Scratchpad & Console"""
     base = str(request.base_url).rstrip('/')
     docs_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Songs API Documentation | Developer Guide</title>
+    <title>Interactive API Documentation & Scratchpad | Free Songs API</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
@@ -667,6 +648,7 @@ async def custom_docs_page(request: Request):
         body {{ font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; color: #f3f4f6; }}
         code, pre {{ font-family: 'Fira Code', monospace; }}
         .glass {{ background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }}
+        .console-output {{ background: #030712; border: 1px solid #1f2937; border-radius: 0.75rem; }}
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -678,13 +660,16 @@ async def custom_docs_page(request: Request):
                     <i class="fa-solid fa-music text-white text-lg"></i>
                 </a>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">Developer Documentation</h1>
-                    <p class="text-xs text-gray-400">Free 5,000+ Music API Reference v1.3.0</p>
+                    <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">API Console & Scratchpad</h1>
+                    <p class="text-xs text-gray-400">Interactive Developer Console · 5,778+ Songs</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
                 <a href="/" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 transition">
-                    <i class="fa-solid fa-house mr-1.5 text-blue-400"></i> Web Player
+                    <i class="fa-solid fa-house mr-1.5 text-blue-400"></i> Home
+                </a>
+                <a href="/privacy" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                    Privacy
                 </a>
                 <a href="/swagger" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 transition">
                     <i class="fa-solid fa-code mr-1.5"></i> Swagger UI
@@ -698,53 +683,120 @@ async def custom_docs_page(request: Request):
         <!-- Sidebar Navigation -->
         <aside class="lg:col-span-1 space-y-2 sticky top-20 h-fit">
             <div class="glass rounded-xl p-4 border border-gray-800 space-y-1 text-xs">
-                <p class="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-2">Getting Started</p>
-                <a href="#overview" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">Overview</a>
-                <a href="#headers" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">Response Headers</a>
+                <p class="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-2">Live Scratchpad</p>
+                <a href="#console-search" class="block py-1.5 px-3 rounded-lg text-indigo-300 hover:bg-gray-800 hover:text-white transition font-medium"><i class="fa-solid fa-terminal mr-1.5 text-[10px]"></i> 1. Search Console</a>
+                <a href="#console-song" class="block py-1.5 px-3 rounded-lg text-indigo-300 hover:bg-gray-800 hover:text-white transition font-medium"><i class="fa-solid fa-terminal mr-1.5 text-[10px]"></i> 2. Video ID Console</a>
+                <a href="#console-random" class="block py-1.5 px-3 rounded-lg text-indigo-300 hover:bg-gray-800 hover:text-white transition font-medium"><i class="fa-solid fa-terminal mr-1.5 text-[10px]"></i> 3. Random Shuffle</a>
+                <a href="#console-stats" class="block py-1.5 px-3 rounded-lg text-indigo-300 hover:bg-gray-800 hover:text-white transition font-medium"><i class="fa-solid fa-terminal mr-1.5 text-[10px]"></i> 4. Stats & Health</a>
+                
+                <p class="font-bold text-gray-400 uppercase tracking-wider text-[10px] pt-4 mb-2">System Specs</p>
+                <a href="#headers" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">Telemetry Headers</a>
                 <a href="#ratelimits" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">Rate Limits & Hints</a>
-                
-                <p class="font-bold text-gray-400 uppercase tracking-wider text-[10px] pt-4 mb-2">Endpoints</p>
-                <a href="#search" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">1. Keyword Search</a>
-                <a href="#song" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">2. Video ID Lookup</a>
-                <a href="#random" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">3. Random Playlist</a>
-                <a href="#catalog" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">4. Songs Catalog</a>
-                <a href="#stats" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">5. API Stats</a>
-                
-                <p class="font-bold text-gray-400 uppercase tracking-wider text-[10px] pt-4 mb-2">Code Examples</p>
-                <a href="#code-python" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">Python (Music Bot)</a>
-                <a href="#code-js" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">JavaScript (Node.js)</a>
+                <a href="#code-python" class="block py-1.5 px-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">Bot Integration (Python)</a>
             </div>
         </aside>
 
         <!-- Main Content -->
         <div class="lg:col-span-3 space-y-12">
-            <!-- Section 1: Overview -->
-            <section id="overview" class="glass rounded-2xl p-6 border border-gray-800">
-                <h2 class="text-2xl font-bold text-gray-100 mb-2">API Overview</h2>
-                <p class="text-sm text-gray-400 leading-relaxed">
-                    The <strong>Free Songs API</strong> is a high-speed, serverless music indexing service providing direct, high-quality audio & video streaming links for over <strong>5,778 songs</strong>.
-                </p>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                    <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800 text-center">
-                        <p class="text-xs text-gray-400">Total Songs</p>
-                        <p class="text-lg font-bold text-emerald-400">5,778+</p>
+            <!-- Section: Live Interactive Console 1 (Search) -->
+            <section id="console-search" class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                        <h3 class="text-base font-bold font-mono text-gray-100">/api/search</h3>
                     </div>
-                    <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800 text-center">
-                        <p class="text-xs text-gray-400">Latency</p>
-                        <p class="text-lg font-bold text-blue-400">&lt; 2ms</p>
+                    <span class="text-xs bg-indigo-900/30 text-indigo-300 px-2.5 py-0.5 rounded border border-indigo-700/30 font-mono">Live Scratchpad</span>
+                </div>
+                <p class="text-xs text-gray-400">Search 5,778+ tracks by title, artist, or multi-keyword tokens.</p>
+                
+                <!-- Live Tester Input -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="text-[11px] font-semibold text-gray-400 block mb-1">Query Parameter (q)</label>
+                        <input id="testSearchQ" type="text" value="Sun Saathiya" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs font-mono text-gray-100 outline-none focus:border-indigo-500">
                     </div>
-                    <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800 text-center">
-                        <p class="text-xs text-gray-400">Rate Limit</p>
-                        <p class="text-lg font-bold text-purple-400">60 req/min</p>
+                    <div>
+                        <label class="text-[11px] font-semibold text-gray-400 block mb-1">Limit (1-50)</label>
+                        <input id="testSearchLimit" type="number" value="2" min="1" max="50" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs font-mono text-gray-100 outline-none focus:border-indigo-500">
                     </div>
-                    <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800 text-center">
-                        <p class="text-xs text-gray-400">Base URL</p>
-                        <p class="text-xs font-mono font-bold text-gray-200 mt-1 truncate">{base}</p>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <button onclick="executeSearchTest()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold text-xs text-white transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                        <i class="fa-solid fa-play text-[10px]"></i> Send Request
+                    </button>
+                    <button onclick="copySnippet('search')" class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 font-medium text-xs text-gray-300 transition">
+                        <i class="fa-regular fa-copy mr-1"></i> Copy cURL
+                    </button>
+                </div>
+
+                <!-- Console Output Container -->
+                <div id="searchOutputBox" class="hidden console-output p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs border-b border-gray-800 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span id="searchStatusCode" class="px-2 py-0.5 rounded font-bold font-mono"></span>
+                            <span id="searchLatency" class="text-gray-400 font-mono text-[11px]"></span>
+                        </div>
+                        <span id="searchRemaining" class="text-purple-400 text-[11px] font-mono"></span>
                     </div>
+                    <pre><code id="searchOutputJson" class="language-json text-xs"></code></pre>
                 </div>
             </section>
 
-            <!-- Section 2: Custom Response Headers -->
+            <!-- Section: Live Interactive Console 2 (Song by ID) -->
+            <section id="console-song" class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                        <h3 class="text-base font-bold font-mono text-gray-100">/api/song/{{video_id}}</h3>
+                    </div>
+                    <span class="text-xs bg-indigo-900/30 text-indigo-300 px-2.5 py-0.5 rounded border border-indigo-700/30 font-mono">Live Scratchpad</span>
+                </div>
+                <p class="text-xs text-gray-400">Direct instant lookup by 11-char YouTube Video ID.</p>
+                
+                <div>
+                    <label class="text-[11px] font-semibold text-gray-400 block mb-1">YouTube Video ID</label>
+                    <input id="testSongId" type="text" value="UNs50T6EYwE" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs font-mono text-gray-100 outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <button onclick="executeSongTest()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold text-xs text-white transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                        <i class="fa-solid fa-play text-[10px]"></i> Send Request
+                    </button>
+                </div>
+
+                <div id="songOutputBox" class="hidden console-output p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs border-b border-gray-800 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span id="songStatusCode" class="px-2 py-0.5 rounded font-bold font-mono"></span>
+                            <span id="songLatency" class="text-gray-400 font-mono text-[11px]"></span>
+                        </div>
+                    </div>
+                    <pre><code id="songOutputJson" class="language-json text-xs"></code></pre>
+                </div>
+            </section>
+
+            <!-- Section: Live Interactive Console 3 (Random) -->
+            <section id="console-random" class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                        <h3 class="text-base font-bold font-mono text-gray-100">/api/random</h3>
+                    </div>
+                    <span class="text-xs bg-indigo-900/30 text-indigo-300 px-2.5 py-0.5 rounded border border-indigo-700/30 font-mono">Live Scratchpad</span>
+                </div>
+                <p class="text-xs text-gray-400">Generate a random playlist of songs for shuffle, discovery, and autoplay.</p>
+                <div class="flex items-center gap-2 pt-1">
+                    <button onclick="executeRandomTest()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold text-xs text-white transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                        <i class="fa-solid fa-shuffle text-[10px]"></i> Fetch 3 Random Songs
+                    </button>
+                </div>
+                <div id="randomOutputBox" class="hidden console-output p-4 space-y-3">
+                    <pre><code id="randomOutputJson" class="language-json text-xs"></code></pre>
+                </div>
+            </section>
+
+            <!-- Section: Custom Response Headers -->
             <section id="headers" class="glass rounded-2xl p-6 border border-gray-800">
                 <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
                     <i class="fa-solid fa-heading text-indigo-400"></i> Custom Response Headers
@@ -753,115 +805,24 @@ async def custom_docs_page(request: Request):
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border border-gray-800 rounded-lg overflow-hidden">
                         <thead class="bg-gray-900 text-gray-400">
-                            <tr>
-                                <th class="p-2.5">Header Name</th>
-                                <th class="p-2.5">Example Value</th>
-                                <th class="p-2.5">Description</th>
-                            </tr>
+                            <tr><th class="p-2.5">Header Name</th><th class="p-2.5">Example Value</th><th class="p-2.5">Description</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-800 text-gray-300">
                             <tr><td class="p-2.5 font-mono text-blue-400">X-Powered-By</td><td class="p-2.5 font-mono">Yuki-Music-Engine</td><td class="p-2.5">API Engine identifier</td></tr>
-                            <tr><td class="p-2.5 font-mono text-blue-400">X-API-Version</td><td class="p-2.5 font-mono">1.3.0</td><td class="p-2.5">Current API schema version</td></tr>
+                            <tr><td class="p-2.5 font-mono text-blue-400">X-API-Version</td><td class="p-2.5 font-mono">1.4.0</td><td class="p-2.5">Current API schema version</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-Total-Songs</td><td class="p-2.5 font-mono">5778</td><td class="p-2.5">Total tracks in database</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-RateLimit-Limit</td><td class="p-2.5 font-mono">60</td><td class="p-2.5">Max requests allowed per minute per IP</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-RateLimit-Remaining</td><td class="p-2.5 font-mono">59</td><td class="p-2.5">Remaining request quota for current window</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-Response-Time-MS</td><td class="p-2.5 font-mono">1.25ms</td><td class="p-2.5">Total server-side processing duration</td></tr>
-                            <tr><td class="p-2.5 font-mono text-blue-400">X-Documentation</td><td class="p-2.5 font-mono">{base}/docs</td><td class="p-2.5">Link to this documentation</td></tr>
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Section 3: Rate Limiting & Hints -->
-            <section id="ratelimits" class="glass rounded-2xl p-6 border border-gray-800">
-                <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-emerald-400"></i> Rate Limits & Smart Hints
-                </h2>
-                <p class="text-xs text-gray-400 leading-relaxed mb-3">
-                    All requests include a helpful <code class="text-indigo-300 font-mono">hint</code> field in the response JSON to guide developers on parameters, best practices, and next steps.
-                </p>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <pre><code class="language-json">{{
-  "success": false,
-  "error": "Route Not Found",
-  "code": "NOT_FOUND",
-  "status_code": 404,
-  "message": "Endpoint '/api/invalid' does not exist.",
-  "hint": "Check the available_endpoints directory below or visit /docs"
-}}</code></pre>
-                </div>
-            </section>
-
-            <!-- Section 4: Endpoints Reference -->
-            <!-- Search -->
-            <section id="search" class="glass rounded-2xl p-6 border border-gray-800 space-y-3">
-                <div class="flex items-center gap-3">
-                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
-                    <h3 class="text-lg font-bold font-mono text-gray-100">/api/search</h3>
-                </div>
-                <p class="text-xs text-gray-400">Searches songs by keywords, song title, or artist with token relevance ranking.</p>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <p class="text-xs text-gray-400 mb-1 font-semibold">Example Request:</p>
-                    <pre><code class="language-bash">curl -X GET "{base}/api/search?q=Sun%20Saathiya&limit=1"</code></pre>
-                    <p class="text-xs text-gray-400 mt-3 mb-1 font-semibold">Example Response:</p>
-                    <pre><code class="language-json">{{
-  "success": true,
-  "total_results": 1,
-  "query": "Sun Saathiya",
-  "hint": "Use /api/song/{{video_id}} for direct lookups or stream directly via 'stream_url'",
-  "results": [
-    {{
-      "video_id": "UNs50T6EYwE",
-      "title": "Sun Saathiya - Full Video | Disney'S Abcd 2 | Varun Dhawan, Shraddha Kapoor",
-      "stream_url": "https://yukiapi.site/file/UNs50T6EYwE",
-      "source": "yukiapi_cloud",
-      "thumbnail": "https://img.youtube.com/vi/UNs50T6EYwE/hqdefault.jpg"
-    }}
-  ]
-}}</code></pre>
-                </div>
-            </section>
-
-            <!-- Song by ID -->
-            <section id="song" class="glass rounded-2xl p-6 border border-gray-800 space-y-3">
-                <div class="flex items-center gap-3">
-                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
-                    <h3 class="text-lg font-bold font-mono text-gray-100">/api/song/{{video_id}}</h3>
-                </div>
-                <p class="text-xs text-gray-400">Lookup single track metadata and streaming URL by YouTube 11-char Video ID.</p>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <pre><code class="language-bash">curl -X GET "{base}/api/song/UNs50T6EYwE"</code></pre>
-                </div>
-            </section>
-
-            <!-- Random -->
-            <section id="random" class="glass rounded-2xl p-6 border border-gray-800 space-y-3">
-                <div class="flex items-center gap-3">
-                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
-                    <h3 class="text-lg font-bold font-mono text-gray-100">/api/random?limit=10</h3>
-                </div>
-                <p class="text-xs text-gray-400">Returns a random playlist of songs (ideal for Music Bot shuffle/autoplay).</p>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <pre><code class="language-bash">curl -X GET "{base}/api/random?limit=5"</code></pre>
-                </div>
-            </section>
-
-            <!-- Stats -->
-            <section id="stats" class="glass rounded-2xl p-6 border border-gray-800 space-y-3">
-                <div class="flex items-center gap-3">
-                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
-                    <h3 class="text-lg font-bold font-mono text-gray-100">/api/stats</h3>
-                </div>
-                <p class="text-xs text-gray-400">Health check, song counts, and active rate limit settings.</p>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <pre><code class="language-bash">curl -X GET "{base}/api/stats"</code></pre>
-                </div>
-            </section>
-
-            <!-- Code Examples -->
+            <!-- Code Example -->
             <section id="code-python" class="glass rounded-2xl p-6 border border-gray-800 space-y-3">
                 <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2">
-                    <i class="fa-brands fa-python text-yellow-400"></i> Python Music Bot Integration (PyTgCalls / Discord)
+                    <i class="fa-brands fa-python text-yellow-400"></i> Python Music Bot Integration
                 </h2>
                 <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
                     <pre><code class="language-python">import aiohttp
@@ -877,23 +838,267 @@ async def search_and_play(query: str):
                 print(f"🎵 Title: {{song['title']}}")
                 print(f"🔗 Stream URL: {{song['stream_url']}}")
                 return song["stream_url"]
-            print("Song not found in cache")
 
-# Run search
 asyncio.run(search_and_play("Kesariya"))</code></pre>
                 </div>
             </section>
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Footer with Privacy & Terms -->
     <footer class="border-t border-gray-800/80 py-6 text-center text-xs text-gray-500">
-        <p>© 2026 Free Songs API · Open Source Serverless Music Index</p>
+        <div class="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p>© 2026 Free Songs API · Open Source Serverless Music Index</p>
+            <div class="flex items-center gap-4">
+                <a href="/privacy" class="hover:text-gray-300">Privacy Policy</a>
+                <a href="/terms" class="hover:text-gray-300">Terms of Service & DMCA</a>
+                <a href="/api/stats" class="hover:text-gray-300">API Stats</a>
+            </div>
+        </div>
     </footer>
+
+    <!-- Scratchpad Live Execution Script -->
+    <script>
+        async function executeSearchTest() {{
+            const q = document.getElementById('testSearchQ').value;
+            const limit = document.getElementById('testSearchLimit').value;
+            const box = document.getElementById('searchOutputBox');
+            const codeEl = document.getElementById('searchOutputJson');
+            const statusEl = document.getElementById('searchStatusCode');
+            const latencyEl = document.getElementById('searchLatency');
+            const remainingEl = document.getElementById('searchRemaining');
+
+            box.classList.remove('hidden');
+            codeEl.textContent = 'Loading request...';
+
+            const start = performance.now();
+            try {{
+                const res = await fetch(`/api/search?q=${{encodeURIComponent(q)}}&limit=${{limit}}`);
+                const duration = (performance.now() - start).toFixed(1);
+                const data = await res.json();
+
+                statusEl.textContent = `${{res.status}} ${{res.statusText}}`;
+                statusEl.className = res.status === 200 ? 'px-2 py-0.5 rounded font-bold font-mono bg-emerald-500/20 text-emerald-400' : 'px-2 py-0.5 rounded font-bold font-mono bg-rose-500/20 text-rose-400';
+                latencyEl.textContent = `⚡ ${{duration}}ms`;
+                remainingEl.textContent = `Quota remaining: ${{res.headers.get('x-ratelimit-remaining') || 'N/A'}}`;
+
+                codeEl.textContent = JSON.stringify(data, null, 2);
+                Prism.highlightElement(codeEl);
+            }} catch (e) {{
+                codeEl.textContent = 'Request failed: ' + e;
+            }}
+        }}
+
+        async function executeSongTest() {{
+            const vid = document.getElementById('testSongId').value.trim();
+            const box = document.getElementById('songOutputBox');
+            const codeEl = document.getElementById('songOutputJson');
+            const statusEl = document.getElementById('songStatusCode');
+            const latencyEl = document.getElementById('songLatency');
+
+            box.classList.remove('hidden');
+            codeEl.textContent = 'Loading request...';
+
+            const start = performance.now();
+            try {{
+                const res = await fetch(`/api/song/${{encodeURIComponent(vid)}}`);
+                const duration = (performance.now() - start).toFixed(1);
+                const data = await res.json();
+
+                statusEl.textContent = `${{res.status}} ${{res.statusText}}`;
+                statusEl.className = res.status === 200 ? 'px-2 py-0.5 rounded font-bold font-mono bg-emerald-500/20 text-emerald-400' : 'px-2 py-0.5 rounded font-bold font-mono bg-rose-500/20 text-rose-400';
+                latencyEl.textContent = `⚡ ${{duration}}ms`;
+
+                codeEl.textContent = JSON.stringify(data, null, 2);
+                Prism.highlightElement(codeEl);
+            }} catch (e) {{
+                codeEl.textContent = 'Request failed: ' + e;
+            }}
+        }}
+
+        async function executeRandomTest() {{
+            const box = document.getElementById('randomOutputBox');
+            const codeEl = document.getElementById('randomOutputJson');
+            box.classList.remove('hidden');
+            codeEl.textContent = 'Loading 3 random songs...';
+            try {{
+                const res = await fetch('/api/random?limit=3');
+                const data = await res.json();
+                codeEl.textContent = JSON.stringify(data, null, 2);
+                Prism.highlightElement(codeEl);
+            }} catch (e) {{
+                codeEl.textContent = 'Request failed: ' + e;
+            }}
+        }}
+
+        function copySnippet(type) {{
+            const q = document.getElementById('testSearchQ').value;
+            const curl = `curl -X GET "{base}/api/search?q=${{encodeURIComponent(q)}}&limit=2"`;
+            navigator.clipboard.writeText(curl);
+            alert('Copied cURL command:\n' + curl);
+        }}
+    </script>
 </body>
 </html>
 """
     return HTMLResponse(content=docs_html)
+
+# ── Privacy Policy Page ──────────────────────────────────────────────────────
+@app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+async def privacy_page():
+    """Serves the Privacy Policy & Security Architecture Page"""
+    privacy_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | Free Songs API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; color: #cbd5e1; }
+        .glass { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+    <header class="border-b border-gray-800/80 sticky top-0 z-50 glass">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-music text-sm"></i>
+                </a>
+                <h1 class="font-bold text-base text-gray-100">Privacy Policy & Security</h1>
+            </div>
+            <a href="/" class="text-xs text-blue-400 hover:text-blue-300 font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Home</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-10 flex-1 w-full">
+        <div class="glass rounded-2xl p-6 sm:p-10 border border-gray-800 space-y-6 text-sm leading-relaxed">
+            <div class="border-b border-gray-800 pb-4">
+                <h2 class="text-2xl font-bold text-gray-100 flex items-center gap-3">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i> Strict Zero-Logs Privacy Policy
+                </h2>
+                <p class="text-xs text-gray-400 mt-1">Last Updated: August 2026 · Built for Privacy & Transparency</p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-indigo-400"></i> 1. Zero Search & Query Tracking
+                </h3>
+                <p>
+                    We respect your digital privacy. The Free Songs API enforces a strict <strong>Zero Query Logging</strong> policy. We do not store, persist, correlate, or sell any search keywords, user queries, IP addresses, or bot tokens.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-server text-indigo-400"></i> 2. In-Memory Ephemeral Rate Limiting
+                </h3>
+                <p>
+                    Rate limiting is handled entirely via an in-memory sliding window cache. IP timestamps are automatically discarded after 60 seconds and are never persisted to any database or storage disk.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-lock text-indigo-400"></i> 3. Transport Layer Security (TLS 1.3)
+                </h3>
+                <p>
+                    All API communications and stream deliveries are strictly encrypted over HTTPS using modern TLS 1.3 cipher suites, preventing eavesdropping and man-in-the-middle attacks.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-indigo-400"></i> 4. Contact & Inquiries
+                </h3>
+                <p>
+                    For privacy inquiries or technical questions regarding this open-source API, please open an issue on the official GitHub repository.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-800/80 py-6 text-center text-xs text-gray-500">
+        <p>© 2026 Free Songs API · Open Source Privacy First</p>
+    </footer>
+</body>
+</html>
+"""
+    return HTMLResponse(content=privacy_html)
+
+# ── Terms of Service & DMCA Page ─────────────────────────────────────────────
+@app.get("/terms", response_class=HTMLResponse, include_in_schema=False)
+async def terms_page():
+    """Serves the Terms of Service and DMCA Policy Page"""
+    terms_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service & DMCA | Free Songs API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; color: #cbd5e1; }
+        .glass { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+    <header class="border-b border-gray-800/80 sticky top-0 z-50 glass">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-music text-sm"></i>
+                </a>
+                <h1 class="font-bold text-base text-gray-100">Terms of Service & DMCA</h1>
+            </div>
+            <a href="/" class="text-xs text-blue-400 hover:text-blue-300 font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Home</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-10 flex-1 w-full">
+        <div class="glass rounded-2xl p-6 sm:p-10 border border-gray-800 space-y-6 text-sm leading-relaxed">
+            <div class="border-b border-gray-800 pb-4">
+                <h2 class="text-2xl font-bold text-gray-100 flex items-center gap-3">
+                    <i class="fa-solid fa-gavel text-amber-400"></i> Terms of Service & Fair Use
+                </h2>
+                <p class="text-xs text-gray-400 mt-1">Effective Date: August 2026</p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200">1. Fair Use & Bot Usage</h3>
+                <p>
+                    The Free Songs API is provided free of charge for educational, research, and non-commercial bot integrations. Automated scripts must adhere to the <strong>60 requests/minute rate limit</strong>. Excessive spamming or DDoS attacks will result in automatic IP throttling.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200">2. Copyright & DMCA Takedown Notice</h3>
+                <p>
+                    We respect intellectual property rights. This API acts as an index of audio/video content cached across public cloud storage networks. If you are a copyright owner or an agent thereof and believe that any content indexed by this service infringes upon your copyright, you may submit a formal DMCA takedown notice with the YouTube Video ID for immediate removal from the index.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-base font-semibold text-gray-200">3. Disclaimer of Warranty</h3>
+                <p>
+                    This service is provided "AS-IS" without warranty of any kind, express or implied. The developers shall not be liable for any damages resulting from the use or inability to use this API.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-800/80 py-6 text-center text-xs text-gray-500">
+        <p>© 2026 Free Songs API · Open Source Terms</p>
+    </footer>
+</body>
+</html>
+"""
+    return HTMLResponse(content=terms_html)
 
 # ── API Endpoints ────────────────────────────────────────────────────────────
 @app.get("/api/search", response_model=SearchResponse, summary="Search songs by keyword or title")
@@ -904,7 +1109,6 @@ async def api_search(
     """Search songs with smart multi-token relevance ranking"""
     results = rank_search(q, limit=limit)
     
-    # Fallback to MongoDB if in-memory returned empty and mongo is configured
     if not results and mongo_col is not None:
         try:
             db_matches = list(mongo_col.find(
@@ -1016,7 +1220,7 @@ async def api_stats():
         "catbox_songs": catbox_count,
         "rate_limit_per_minute": DEFAULT_RATE_LIMIT,
         "status": "healthy",
-        "version": "1.3.0",
-        "hint": "Visit /docs for interactive developer guide and code samples."
+        "version": "1.4.0",
+        "hint": "Visit /docs for interactive developer guide and live scratchpad."
     }
 
