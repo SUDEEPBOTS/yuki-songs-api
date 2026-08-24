@@ -2,8 +2,10 @@ import os
 import json
 import random
 import re
+import time
+from collections import defaultdict
 from typing import List, Optional
-from fastapi import FastAPI, Query, HTTPException, Path
+from fastapi import FastAPI, Query, HTTPException, Path, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -12,8 +14,8 @@ from pydantic import BaseModel
 # Initialize FastAPI
 app = FastAPI(
     title="Free 5,000+ Music & Songs API",
-    description="High-performance, ultra-fast free REST API with 5,700+ cached songs ready for direct audio/video streaming.",
-    version="1.0.0",
+    description="High-performance, ultra-fast free REST API with 5,700+ cached songs ready for direct audio/video streaming with built-in DDoS & Rate Limiting Protection.",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -28,7 +30,63 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# In-Memory Cache and Search Indexes
+# ── DDoS & Sliding Window Rate Limiter ─────────────────────────────────────
+DEFAULT_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+
+class SlidingWindowRateLimiter:
+    def __init__(self, requests_per_minute: int = 60):
+        self.rpm = requests_per_minute
+        self.window = 60  # seconds
+        self.hits = defaultdict(list)
+
+    def get_client_ip(self, request: Request) -> str:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+        return request.client.host if request.client else "127.0.0.1"
+
+    def check(self, request: Request, custom_limit: Optional[int] = None):
+        limit = custom_limit or self.rpm
+        ip = self.get_client_ip(request)
+        now = time.time()
+        
+        # Clean timestamps older than 60 seconds
+        self.hits[ip] = [ts for ts in self.hits[ip] if now - ts < self.window]
+        
+        if len(self.hits[ip]) >= limit:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded (Max {limit} requests/min). Please slow down to prevent abuse.",
+                headers={"Retry-After": "60"}
+            )
+        self.hits[ip].append(now)
+
+rate_limiter = SlidingWindowRateLimiter(DEFAULT_RATE_LIMIT)
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Apply rate limiting to all /api/* routes
+    if request.url.path.startswith("/api/"):
+        try:
+            rate_limiter.check(request)
+        except HTTPException as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "success": False,
+                    "error": "Too Many Requests",
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": exc.detail,
+                    "retry_after_seconds": 60
+                },
+                headers=exc.headers
+            )
+    return await call_next(request)
+
+# ── In-Memory Cache & Search Engine ─────────────────────────────────────────
 SONGS_DATA: List[dict] = []
 SONGS_BY_ID: dict = {}
 
@@ -53,7 +111,6 @@ def load_songs():
             except Exception as e:
                 print(f"Failed to load songs from {path}: {e}")
 
-# Pre-load on startup
 load_songs()
 
 # Optional MongoDB Client for Live Sync
@@ -88,6 +145,7 @@ class StatsResponse(BaseModel):
     total_songs: int
     yukiapi_cloud_songs: int
     catbox_songs: int
+    rate_limit_per_minute: int
     status: str
     version: str
 
@@ -162,7 +220,7 @@ async def landing_page():
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">Free Songs API</h1>
-                    <p class="text-xs text-gray-400">5,778+ Cloud Cached Songs</p>
+                    <p class="text-xs text-gray-400">5,778+ Cloud Cached Songs · DDoS Protected</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -181,7 +239,7 @@ async def landing_page():
         <!-- Hero Section -->
         <div class="text-center mb-10">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 5,778+ Songs Available · Zero Rate Limits
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 5,778+ Songs Available · Protected & Rate-Limited
             </div>
             <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
                 Lightning Fast <span class="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Music API</span> for Apps & Bots
@@ -212,7 +270,7 @@ async def landing_page():
             </div>
         </div>
 
-        <!-- Audio Player Bar (Sticky when playing) -->
+        <!-- Audio Player Bar -->
         <div id="playerContainer" class="hidden mb-8 glass rounded-2xl p-4 border border-blue-500/30 glow">
             <div class="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div class="flex items-center gap-3 w-full md:w-auto">
@@ -227,9 +285,7 @@ async def landing_page():
         </div>
 
         <!-- Results Grid -->
-        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Dynamic Song Cards rendered here -->
-        </div>
+        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         <div id="loading" class="hidden text-center py-10">
             <i class="fa-solid fa-circle-notch fa-spin text-blue-500 text-3xl"></i>
             <p class="text-xs text-gray-400 mt-2">Searching 5,778+ tracks...</p>
@@ -253,7 +309,7 @@ async def landing_page():
         </div>
     </footer>
 
-    <!-- Frontend Script -->
+    <!-- Script -->
     <script>
         const input = document.getElementById('searchInput');
         input.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
@@ -277,6 +333,11 @@ async def landing_page():
 
             try {
                 const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`);
+                if (res.status === 429) {
+                    loading.classList.add('hidden');
+                    alert('⚠️ Rate limit exceeded! Please wait a few seconds before searching again.');
+                    return;
+                }
                 const data = await res.json();
                 loading.classList.add('hidden');
 
@@ -308,7 +369,6 @@ async def landing_page():
                 renderSongs(data.results);
             } catch (e) {
                 loading.classList.add('hidden');
-                alert('Failed fetching random songs');
             }
         }
 
@@ -366,7 +426,6 @@ async def landing_page():
             alert('Copied stream URL to clipboard:\n' + url);
         }
 
-        // Load 8 random songs on initial load
         window.addEventListener('DOMContentLoaded', getRandomSongs);
     </script>
 </body>
@@ -442,7 +501,7 @@ async def api_get_song(video_id: str = Path(..., description="YouTube 11-char Vi
 
 @app.get("/api/random", response_model=SearchResponse, summary="Get random songs (discovery / shuffle)")
 async def api_random(limit: int = Query(10, ge=1, le=50, description="Number of random songs")):
-    """Get a random playlist of songs (ideal for Music Bot autoplay & radio features)"""
+    """Get a random playlist of songs"""
     count = min(limit, len(SONGS_DATA))
     sampled = random.sample(SONGS_DATA, count) if SONGS_DATA else []
     return {
@@ -472,7 +531,7 @@ async def api_list_songs(
 
 @app.get("/api/stats", response_model=StatsResponse, summary="Get API health & catalog statistics")
 async def api_stats():
-    """Returns total song count, cloud sources, and server status"""
+    """Returns total song count, cloud sources, and rate limit settings"""
     yuki_count = sum(1 for s in SONGS_DATA if "yukiapi" in s.get("stream_url", ""))
     catbox_count = len(SONGS_DATA) - yuki_count
     return {
@@ -480,7 +539,8 @@ async def api_stats():
         "total_songs": len(SONGS_DATA),
         "yukiapi_cloud_songs": yuki_count,
         "catbox_songs": catbox_count,
+        "rate_limit_per_minute": DEFAULT_RATE_LIMIT,
         "status": "healthy",
-        "version": "1.0.0"
+        "version": "1.1.0"
     }
 
