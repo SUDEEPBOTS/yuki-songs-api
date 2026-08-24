@@ -1,61 +1,96 @@
-# 🎵 Free 5,000+ Music & Songs REST API
+<div align="center">
+
+<!-- Animated Header Banner -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,20&height=220&section=header&text=🎵%20Free%20Songs%20API&fontSize=48&fontColor=ffffff&animation=twinkling&fontAlignY=38&desc=High-Performance%20Serverless%20Music%20Search%20%26%20Stream%20Engine&descAlignY=58&descSize=18&descAlign=50" width="100%"/>
+
+<!-- Badges Row 1: Frameworks & Deploy -->
+<p align="center">
+  <a href="https://vercel.com/new/clone?repository-url=https://github.com/your-username/yuki-songs-api">
+    <img src="https://vercel.com/button" alt="Deploy with Vercel" height="28">
+  </a>
+</p>
+
+<!-- Badges Row 2: Stats & Tech -->
+<p align="center">
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/Python_3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.9+"/>
+  <img src="https://img.shields.io/badge/Vercel_Serverless-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel"/>
+  <img src="https://img.shields.io/badge/Indexed_Songs-5%2C778+-7928CA?style=for-the-badge&logo=music&logoColor=white" alt="Indexed Tracks"/>
+  <img src="https://img.shields.io/badge/Latency-%3C_2ms-0070F3?style=for-the-badge&logo=speedtest&logoColor=white" alt="Latency"/>
+  <img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="MIT License"/>
+</p>
+
+<p align="center">
+  <b>⚡ Sub-2ms Latency</b> · <b>🔍 Smart Multi-Keyword Matching</b> · <b>🛡️ Anti-DDoS Sliding Window</b> · <b>📱 Built-in Web Player & Scratchpad</b>
+</p>
+
+---
+
+</div>
+
+## 🌟 Highlights & Features
+
+<table>
+  <tr>
+    <td width="50%">
+      <h3 align="left">⚡ Lightning Fast Serverless Engine</h3>
+      <p>Pre-bundled in-memory token trie search index answering queries in <b>&lt; 2 milliseconds</b> with zero database overhead.</p>
+    </td>
+    <td width="50%">
+      <h3 align="left">🔍 Smart Multi-Token Search</h3>
+      <p>Matches artist names, song titles, and multi-word keywords in any order with automatic relevance scoring.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3 align="left">🛡️ Sliding-Window Anti-DDoS</h3>
+      <p>Automatic per-IP rate limiting (60 req/min) preventing scraper abuse, bot flooding, and DDoS vectors.</p>
+    </td>
+    <td width="50%">
+      <h3 align="left">📱 Interactive Console & Scratchpad</h3>
+      <p>Modern glassmorphism Web Player at <code>/</code> and live interactive developer scratchpad console at <code>/docs</code>.</p>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🚀 1-Click Free Deployment
+
+Deploy your own standalone music search API to Vercel in seconds:
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/yuki-songs-api)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100.0-009688.svg?style=flat&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Songs](https://img.shields.io/badge/Indexed_Songs-5%2C778+-brightgreen.svg)](#)
 
-A high-performance, open-source serverless REST API that indexes **5,778+ high-quality songs** with direct, instant high-speed audio/video streaming URLs. Built with **FastAPI** for sub-millisecond response latency, ready for instant **1-Click deployment on Vercel**.
-
----
-
-## ✨ Features
-
-- ⚡ **Sub-2ms Latency:** In-memory indexed token search engine for lightning fast lookups.
-- 🔍 **Smart Multi-Keyword Search:** Search songs by title, artist, or keywords with relevance scoring.
-- 🆔 **YouTube Video ID Lookup:** Direct `O(1)` constant-time lookup by YouTube Video ID.
-- 🎲 **Random Song / Shuffle Endpoint:** Perfect for Telegram / Discord music bot radio and autoplay features.
-- 📱 **Interactive Web Search Playground:** Built-in modern glassmorphism web UI with real-time audio playback.
-- 🚀 **1-Click Vercel Deployment:** Zero database setup required to get started!
-- 🗄️ **Optional MongoDB Sync:** Plug in `MONGO_URI` in `.env` for real-time dynamic sync.
+1. Click the **Deploy with Vercel** button above.
+2. Connect your GitHub account and create the repository.
+3. *(Optional)* Add `MONGO_URI` in Vercel Environment Variables if you want real-time dynamic sync with an external database.
+4. Your API is live instantly on `https://your-project.vercel.app`! 🎉
 
 ---
 
-## 🚀 Quick Deploy to Vercel
+## 📡 REST API Reference
 
-Click the button below to deploy your own instance of this API on Vercel for free:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/yuki-songs-api)
-
----
-
-## 📡 API Endpoints
-
-### 1. Keyword Search (Multiple Results)
-Search across 5,778+ songs with keyword relevance scoring.
+### 1. 🔍 Keyword Search
+Search across 5,778+ songs with multi-word relevance scoring.
 
 ```http
 GET /api/search?q={query}&limit={limit}
 ```
 
-**Parameters:**
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `q` | `string` | **Required** | Song name, artist keyword, or Video ID |
-| `limit` | `int` | `10` | Max results to return (1 - 50) |
+| `q` | `string` | **Required** | Song name, artist keyword, or YouTube Video ID |
+| `limit` | `integer` | `10` | Number of results to return (1 - 50) |
 
-**Example Request:**
-```bash
-curl -X GET "https://your-api.vercel.app/api/search?q=Sun%20Saathiya&limit=2"
-```
+<details>
+<summary><b>📋 View Example JSON Response (Click to expand)</b></summary>
 
-**Example Response:**
 ```json
 {
   "success": true,
   "total_results": 1,
   "query": "Sun Saathiya",
+  "hint": "Use /api/song/{video_id} for direct lookups or stream directly via 'stream_url'",
   "results": [
     {
       "video_id": "UNs50T6EYwE",
@@ -67,25 +102,24 @@ curl -X GET "https://your-api.vercel.app/api/search?q=Sun%20Saathiya&limit=2"
   ]
 }
 ```
+</details>
 
 ---
 
-### 2. Video ID Direct Lookup
-Lookup single song metadata and direct stream link by YouTube Video ID.
+### 2. 🆔 YouTube Video ID Lookup
+Instant $O(1)$ constant-time lookup by YouTube 11-char Video ID.
 
 ```http
 GET /api/song/{video_id}
 ```
 
-**Example Request:**
-```bash
-curl -X GET "https://your-api.vercel.app/api/song/UNs50T6EYwE"
-```
+<details>
+<summary><b>📋 View Example JSON Response (Click to expand)</b></summary>
 
-**Example Response:**
 ```json
 {
   "success": true,
+  "hint": "Stream audio/video directly using the 'stream_url' link.",
   "song": {
     "video_id": "UNs50T6EYwE",
     "title": "Sun Saathiya - Full Video | Disney'S Abcd 2",
@@ -95,11 +129,12 @@ curl -X GET "https://your-api.vercel.app/api/song/UNs50T6EYwE"
   }
 }
 ```
+</details>
 
 ---
 
-### 3. Random Songs (Discovery / Radio)
-Fetch a random playlist of songs.
+### 3. 🎲 Random Songs (Discovery & Autoplay)
+Returns a randomized playlist of tracks (ideal for Telegram/Discord music bot autoplay & radio).
 
 ```http
 GET /api/random?limit=10
@@ -107,81 +142,113 @@ GET /api/random?limit=10
 
 ---
 
-### 4. Catalog Pagination
-Browse the complete catalog page by page.
-
-```http
-GET /api/songs?page=1&limit=50
-```
-
----
-
-### 5. API Stats & Health Check
+### 4. 📊 Catalog Statistics & Health Check
 ```http
 GET /api/stats
 ```
 
 ---
 
-## 💻 Code Examples for Music Bots
+## 🏷️ Custom Telemetry Headers
 
-### Python (aiohttp / requests)
+Every HTTP response includes detailed diagnostics and telemetry headers:
+
+```http
+X-Powered-By: Yuki-Music-Engine
+X-API-Version: 1.4.0
+X-Total-Songs: 5778
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+X-Response-Time-MS: 1.25ms
+X-Documentation: https://your-api.vercel.app/docs
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+```
+
+---
+
+## 🤖 Music Bot Integration Code Snippets
+
+### 🐍 Python (Telegram Bot / PyTgCalls / Pyrogram)
 ```python
 import aiohttp
 import asyncio
 
-async def play_song(query: str):
-    url = f"https://your-api.vercel.app/api/search?q={query}&limit=1"
+async def play_music(query: str):
+    api_url = f"https://your-api.vercel.app/api/search?q={query}&limit=1"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
+        async with session.get(api_url) as resp:
             data = await resp.json()
-            if data["success"] and data["results"]:
-                song = data["results"][0]
-                print(f"Playing: {song['title']}")
-                print(f"Stream URL: {song['stream_url']}")
-                return song["stream_url"]
-            print("Song not found")
+            if data.get("success") and data.get("results"):
+                track = data["results"][0]
+                print(f"🎶 Title: {track['title']}")
+                print(f"🔗 Direct Stream: {track['stream_url']}")
+                return track["stream_url"]
+            print("Track not found in index.")
 
-asyncio.run(play_song("Arijit Singh"))
+asyncio.run(play_music("Kesariya"))
 ```
 
-### JavaScript / Node.js (Axios)
+### 🟨 JavaScript / Node.js (Discord.js)
 ```javascript
 const axios = require('axios');
 
-async function searchSongs(query) {
+async function searchTrack(query) {
     const res = await axios.get(`https://your-api.vercel.app/api/search`, {
-        params: { q: query, limit: 5 }
+        params: { q: query, limit: 3 }
     });
     console.log(res.data.results);
 }
 
-searchSongs("Sidhu Moosewala");
+searchTrack("Sidhu Moosewala");
 ```
 
 ---
 
 ## 🛠️ Local Development
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/yuki-songs-api.git
-   cd yuki-songs-api
-   ```
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-username/yuki-songs-api.git
+cd yuki-songs-api
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# 2. Install dependencies
+pip install -r requirements.txt
 
-3. **Run local development server:**
-   ```bash
-   uvicorn api.index:app --reload --port 8000
-   ```
-
-4. Open `http://localhost:8000` in your browser to view the interactive Web UI and test queries!
+# 3. Start local development server
+uvicorn api.index:app --reload --port 8000
+```
+Open `http://localhost:8000` in your browser to view the interactive Web UI and test queries!
 
 ---
 
-## 📄 License
-This project is open-source and licensed under the [MIT License](LICENSE).
+<div align="center">
+
+## ⚖️ Legal Disclaimer & Copyright Notice
+
+</div>
+
+> [!IMPORTANT]
+> **NO COPYRIGHT INFRINGEMENT INTENDED · ZERO MEDIA HOSTING ON GITHUB**
+>
+> 1. **No Media Files Stored on this Repository:** This repository and GitHub do **NOT** host, store, upload, transmit, or distribute any copyrighted MP3, MP4, video, or audio media files. This repository consists **exclusively of open-source software code, search algorithms, and public metadata references**.
+>
+> 2. **Information Location / Search Indexing Tool:** This API operates strictly as a **metadata search engine and hyperlinking directory** (similar to Google Search or DuckDuckGo). All multimedia URLs indexed by this tool are hosted and stored on independent, publicly accessible third-party cloud networks over which the maintainers of this repository exercise no operational control.
+>
+> 3. **Non-Commercial & Educational Fair Use:** This project is created for **educational, non-profit, architectural research, and open-source demonstration purposes only** under Section 107 of the Copyright Act of 1976 (*Fair Use*).
+>
+> 4. **DMCA Takedown & Copyright Delisting Procedure:** We strongly respect the intellectual property rights of creators. If you are a copyright owner or authorized representative and wish to request the removal or delisting of any metadata entry or search index reference:
+>    - Please open a **[DMCA Delisting Request](https://github.com/your-username/yuki-songs-api/issues/new?template=dmca_takedown.md)** using our formal template.
+>    - Verified requests will result in the **immediate, permanent delisting** of the referenced metadata from the index within 24 hours.
+
+---
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,20&height=100&section=footer" width="100%"/>
+
+<p align="center">
+  Released under the <a href="LICENSE">MIT License</a> · Built with ❤️ for Developers & Creators
+</p>
+
+</div>
