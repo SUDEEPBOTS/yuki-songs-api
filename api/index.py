@@ -9,13 +9,14 @@ from fastapi import FastAPI, Query, HTTPException, Path, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 
 # Initialize FastAPI
 app = FastAPI(
     title="Free 5,000+ Music & Songs API",
     description="High-performance, ultra-fast free REST API with 5,700+ cached songs ready for direct audio/video streaming with built-in DDoS & Rate Limiting Protection.",
-    version="1.1.0",
+    version="1.2.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -29,6 +30,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# ── Available Endpoints Directory ──────────────────────────────────────────
+AVAILABLE_ENDPOINTS = {
+    "search": {
+        "method": "GET",
+        "path": "/api/search?q={query}&limit=10",
+        "description": "Smart multi-keyword token matching with relevance ranking"
+    },
+    "song_by_id": {
+        "method": "GET",
+        "path": "/api/song/{video_id}",
+        "description": "Direct YouTube 11-char Video ID lookup"
+    },
+    "random": {
+        "method": "GET",
+        "path": "/api/random?limit=10",
+        "description": "Get random playlist for shuffle and discovery"
+    },
+    "songs_catalog": {
+        "method": "GET",
+        "path": "/api/songs?page=1&limit=50",
+        "description": "Paginated catalog of all 5,778+ indexed tracks"
+    },
+    "stats": {
+        "method": "GET",
+        "path": "/api/stats",
+        "description": "API health check and catalog statistics"
+    },
+    "swagger_docs": {
+        "method": "GET",
+        "path": "/docs",
+        "description": "Interactive OpenAPI Swagger documentation"
+    }
+}
 
 # ── DDoS & Sliding Window Rate Limiter ─────────────────────────────────────
 DEFAULT_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
@@ -79,12 +114,85 @@ async def rate_limit_middleware(request: Request, call_next):
                     "success": False,
                     "error": "Too Many Requests",
                     "code": "RATE_LIMIT_EXCEEDED",
+                    "status_code": 429,
                     "message": exc.detail,
                     "retry_after_seconds": 60
                 },
                 headers=exc.headers
             )
     return await call_next(request)
+
+# ── Custom Bad Route & HTTP Exception Handlers ─────────────────────────────
+@app.exception_handler(StarletteHTTPException)
+async def custom_starlette_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    headers = getattr(exc, "headers", None)
+    
+    if exc.status_code == 404:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": "Route Not Found",
+                "code": "NOT_FOUND",
+                "status_code": 404,
+                "message": f"Endpoint '{request.url.path}' does not exist on this server.",
+                "hint": "Explore all valid endpoints in the API documentation at /docs or check the endpoints directory below.",
+                "available_endpoints": AVAILABLE_ENDPOINTS
+            },
+            headers=headers
+        )
+    elif exc.status_code == 405:
+        return JSONResponse(
+            status_code=405,
+            content={
+                "success": False,
+                "error": "Method Not Allowed",
+                "code": "METHOD_NOT_ALLOWED",
+                "status_code": 405,
+                "message": f"HTTP Method '{request.method}' is not supported for '{request.url.path}'. Most endpoints only support GET requests.",
+                "hint": "Check /docs for supported HTTP methods."
+            },
+            headers=headers
+        )
+    elif exc.status_code == 429:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "success": False,
+                "error": "Too Many Requests",
+                "code": "RATE_LIMIT_EXCEEDED",
+                "status_code": 429,
+                "message": exc.detail,
+                "retry_after_seconds": 60
+            },
+            headers=headers
+        )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": "HTTP Error",
+            "code": "HTTP_ERROR",
+            "status_code": exc.status_code,
+            "message": str(exc.detail)
+        },
+        headers=headers
+    )
+
+@app.exception_handler(Exception)
+async def general_500_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "Internal Server Error",
+            "code": "INTERNAL_SERVER_ERROR",
+            "status_code": 500,
+            "message": "An unexpected error occurred. Please try again later.",
+            "detail": str(exc)
+        }
+    )
 
 # ── In-Memory Cache & Search Engine ─────────────────────────────────────────
 SONGS_DATA: List[dict] = []
@@ -191,9 +299,10 @@ def rank_search(query: str, limit: int = 10) -> List[dict]:
     results = [item[1] for item in combined[:limit]]
     return results
 
+# ── Interactive Web UI ───────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def landing_page():
-    """Serves the interactive Web Search & Stream Playground"""
+    """Serves the interactive Web Search & Stream Playground with Endpoints Showcase"""
     html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -208,6 +317,7 @@ async def landing_page():
         .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .glow { box-shadow: 0 0 50px -10px rgba(59, 130, 246, 0.3); }
         .song-card:hover { transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.5); }
+        .endpoint-card:hover { border-color: rgba(99, 102, 241, 0.6); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -220,12 +330,15 @@ async def landing_page():
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">Free Songs API</h1>
-                    <p class="text-xs text-gray-400">5,778+ Cloud Cached Songs · DDoS Protected</p>
+                    <p class="text-xs text-gray-400">5,778+ Cloud Cached Songs · Anti-DDoS Protected</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
+                <a href="#endpoints" class="hidden sm:inline-flex px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-300 transition">
+                    <i class="fa-solid fa-network-wired mr-1.5 text-indigo-400"></i> Endpoints
+                </a>
                 <a href="/docs" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 transition">
-                    <i class="fa-solid fa-book-open mr-1.5 text-blue-400"></i> API Docs
+                    <i class="fa-solid fa-book-open mr-1.5 text-blue-400"></i> Swagger UI
                 </a>
                 <a href="https://github.com" target="_blank" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition">
                     <i class="fa-brands fa-github mr-1.5"></i> GitHub
@@ -235,11 +348,11 @@ async def landing_page():
     </header>
 
     <!-- Main Container -->
-    <main class="max-w-5xl mx-auto px-4 py-12 flex-1 w-full">
+    <main class="max-w-5xl mx-auto px-4 py-10 flex-1 w-full">
         <!-- Hero Section -->
-        <div class="text-center mb-10">
+        <div class="text-center mb-8">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 5,778+ Songs Available · Protected & Rate-Limited
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 5,778+ Songs Ready · 2ms Response Latency
             </div>
             <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
                 Lightning Fast <span class="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Music API</span> for Apps & Bots
@@ -285,16 +398,103 @@ async def landing_page():
         </div>
 
         <!-- Results Grid -->
-        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16"></div>
         <div id="loading" class="hidden text-center py-10">
             <i class="fa-solid fa-circle-notch fa-spin text-blue-500 text-3xl"></i>
             <p class="text-xs text-gray-400 mt-2">Searching 5,778+ tracks...</p>
         </div>
-        <div id="noResults" class="hidden text-center py-12 glass rounded-2xl">
+        <div id="noResults" class="hidden text-center py-12 glass rounded-2xl mb-16">
             <i class="fa-regular fa-face-frown text-gray-500 text-4xl mb-2"></i>
             <p class="text-sm font-semibold text-gray-300">No matching songs found</p>
             <p class="text-xs text-gray-500 mt-1">Try another keyword or search by YouTube Video ID</p>
         </div>
+
+        <!-- API Endpoints Directory Section -->
+        <section id="endpoints" class="pt-6 border-t border-gray-800">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-network-wired text-indigo-400"></i> API Endpoints Reference
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1">All available REST API routes ready for integration with music bots and applications.</p>
+                </div>
+                <a href="/docs" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold">
+                    Open in Swagger <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+            </div>
+
+            <div class="space-y-3">
+                <!-- Endpoint 1: Search -->
+                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                            <code class="text-sm font-mono text-gray-200">/api/search?q={query}&limit={10}</code>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="/api/search?q=Sun%20Saathiya&limit=2" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Search songs by keyword, title, or artist with token relevance ranking.</p>
+                </div>
+
+                <!-- Endpoint 2: Song by ID -->
+                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                            <code class="text-sm font-mono text-gray-200">/api/song/{video_id}</code>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="/api/song/UNs50T6EYwE" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Get direct stream link and metadata for a specific YouTube 11-char Video ID.</p>
+                </div>
+
+                <!-- Endpoint 3: Random Songs -->
+                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                            <code class="text-sm font-mono text-gray-200">/api/random?limit={10}</code>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="/api/random?limit=5" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Get a random playlist of songs (ideal for Music Bot shuffle & autoplay).</p>
+                </div>
+
+                <!-- Endpoint 4: Catalog Pagination -->
+                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                            <code class="text-sm font-mono text-gray-200">/api/songs?page={1}&limit={50}</code>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="/api/songs?page=1&limit=10" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Browse the complete 5,778+ songs database page-by-page.</p>
+                </div>
+
+                <!-- Endpoint 5: Stats -->
+                <div class="glass rounded-xl p-4 border border-gray-800/90 endpoint-card transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GET</span>
+                            <code class="text-sm font-mono text-gray-200">/api/stats</code>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="/api/stats" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-blue-400 transition font-medium">Try it <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i></a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Returns server health status, song counts, and active rate limit settings.</p>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Footer -->
@@ -303,8 +503,8 @@ async def landing_page():
             <p>© 2026 Free Songs API · Open Source Serverless Music Index</p>
             <div class="flex items-center gap-4">
                 <a href="/api/stats" class="hover:text-gray-300">API Stats</a>
-                <a href="/docs" class="hover:text-gray-300">Swagger Docs</a>
-                <a href="/api/random" class="hover:text-gray-300">Random Endpoint</a>
+                <a href="/docs" class="hover:text-gray-300">Swagger UI</a>
+                <a href="/api/random" class="hover:text-gray-300">Random</a>
             </div>
         </div>
     </footer>
@@ -363,7 +563,7 @@ async def landing_page():
             loading.classList.remove('hidden');
 
             try {
-                const res = await fetch('/api/random?limit=12');
+                const res = await fetch('/api/random?limit=8');
                 const data = await res.json();
                 loading.classList.add('hidden');
                 renderSongs(data.results);
@@ -433,7 +633,7 @@ async def landing_page():
 """
     return HTMLResponse(content=html_content)
 
-# API Endpoints
+# ── API Endpoints ────────────────────────────────────────────────────────────
 @app.get("/api/search", response_model=SearchResponse, summary="Search songs by keyword or title")
 async def api_search(
     q: str = Query(..., description="Song name, artist keyword, or YouTube Video ID"),
@@ -497,7 +697,7 @@ async def api_get_song(video_id: str = Path(..., description="YouTube 11-char Vi
         except Exception as e:
             print(f"Mongo lookup error: {e}")
 
-    raise HTTPException(status_code=404, detail="Song not found in database")
+    raise HTTPException(status_code=404, detail=f"Song with Video ID '{video_id}' not found in database")
 
 @app.get("/api/random", response_model=SearchResponse, summary="Get random songs (discovery / shuffle)")
 async def api_random(limit: int = Query(10, ge=1, le=50, description="Number of random songs")):
@@ -541,6 +741,5 @@ async def api_stats():
         "catbox_songs": catbox_count,
         "rate_limit_per_minute": DEFAULT_RATE_LIMIT,
         "status": "healthy",
-        "version": "1.1.0"
+        "version": "1.2.0"
     }
-
