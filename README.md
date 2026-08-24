@@ -5,7 +5,7 @@
 
 <!-- Badges Row 1: Frameworks & Deploy -->
 <p align="center">
-  <a href="https://vercel.com/new/clone?repository-url=https://github.com/your-username/yuki-songs-api">
+  <a href="https://vercel.com/new/clone?repository-url=https://github.com/SUDEEPBOTS/yuki-songs-api">
     <img src="https://vercel.com/button" alt="Deploy with Vercel" height="28">
   </a>
 </p>
@@ -59,7 +59,7 @@
 
 Deploy your own standalone music search API to Vercel in seconds:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/yuki-songs-api)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/SUDEEPBOTS/yuki-songs-api)
 
 1. Click the **Deploy with Vercel** button above.
 2. Connect your GitHub account and create the repository.
@@ -209,7 +209,7 @@ searchTrack("Sidhu Moosewala");
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/yuki-songs-api.git
+git clone https://github.com/SUDEEPBOTS/yuki-songs-api.git
 cd yuki-songs-api
 
 # 2. Install dependencies
@@ -238,7 +238,7 @@ Open `http://localhost:8000` in your browser to view the interactive Web UI and 
 > 3. **Non-Commercial & Educational Fair Use:** This project is created for **educational, non-profit, architectural research, and open-source demonstration purposes only** under Section 107 of the Copyright Act of 1976 (*Fair Use*).
 >
 > 4. **DMCA Takedown & Copyright Delisting Procedure:** We strongly respect the intellectual property rights of creators. If you are a copyright owner or authorized representative and wish to request the removal or delisting of any metadata entry or search index reference:
->    - Please open a **[DMCA Delisting Request](https://github.com/your-username/yuki-songs-api/issues/new?template=dmca_takedown.md)** using our formal template.
+>    - Please open a **[DMCA Delisting Request](https://github.com/SUDEEPBOTS/yuki-songs-api/issues/new?template=dmca_takedown.md)** using our formal template.
 >    - Verified requests will result in the **immediate, permanent delisting** of the referenced metadata from the index within 24 hours.
 
 ---
