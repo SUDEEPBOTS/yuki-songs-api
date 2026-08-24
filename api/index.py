@@ -16,7 +16,7 @@ from pydantic import BaseModel
 app = FastAPI(
     title="Free 5,000+ Music & Songs API",
     description="High-performance, ultra-fast free REST API with 5,700+ cached songs ready for direct audio/video streaming with built-in DDoS & Rate Limiting Protection.",
-    version="1.4.0",
+    version="1.5.0",
     docs_url="/swagger",
     redoc_url="/redoc"
 )
@@ -30,6 +30,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# ── Vercel Serverless Path Normalizer Middleware ───────────────────────────
+@app.middleware("http")
+async def vercel_path_normalizer_middleware(request: Request, call_next):
+    # Automatically normalize Vercel serverless rewrite paths
+    path = request.scope.get("path", "")
+    if path.startswith("/api/index.py"):
+        new_path = path.replace("/api/index.py", "", 1) or "/"
+        request.scope["path"] = new_path
+    elif path.startswith("/api/index"):
+        new_path = path.replace("/api/index", "", 1) or "/"
+        request.scope["path"] = new_path
+    return await call_next(request)
 
 # ── Available Endpoints Directory ──────────────────────────────────────────
 AVAILABLE_ENDPOINTS = {
@@ -131,7 +144,7 @@ async def custom_headers_and_rate_limit_middleware(request: Request, call_next):
             headers = getattr(exc, "headers", {}) or {}
             headers.update({
                 "X-Powered-By": "Yuki-Music-Engine",
-                "X-API-Version": "1.4.0",
+                "X-API-Version": "1.5.0",
                 "X-Total-Songs": str(len(SONGS_DATA)),
                 "X-RateLimit-Limit": str(DEFAULT_RATE_LIMIT),
                 "X-RateLimit-Remaining": "0",
@@ -156,7 +169,7 @@ async def custom_headers_and_rate_limit_middleware(request: Request, call_next):
     process_time = (time.time() - start_time) * 1000
     
     response.headers["X-Powered-By"] = "Yuki-Music-Engine"
-    response.headers["X-API-Version"] = "1.4.0"
+    response.headers["X-API-Version"] = "1.5.0"
     response.headers["X-Total-Songs"] = str(len(SONGS_DATA))
     response.headers["X-RateLimit-Limit"] = str(DEFAULT_RATE_LIMIT)
     response.headers["X-RateLimit-Remaining"] = str(rate_limiter.get_remaining(request))
@@ -330,6 +343,8 @@ def rank_search(query: str, limit: int = 10) -> List[dict]:
 
 # ── Home Page ────────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/api/index.py", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/api/index", response_class=HTMLResponse, include_in_schema=False)
 async def landing_page():
     """Serves the interactive Web Search & Stream Playground with Endpoints Showcase"""
     html_content = """<!DOCTYPE html>
@@ -809,7 +824,7 @@ async def custom_docs_page(request: Request):
                         </thead>
                         <tbody class="divide-y divide-gray-800 text-gray-300">
                             <tr><td class="p-2.5 font-mono text-blue-400">X-Powered-By</td><td class="p-2.5 font-mono">Yuki-Music-Engine</td><td class="p-2.5">API Engine identifier</td></tr>
-                            <tr><td class="p-2.5 font-mono text-blue-400">X-API-Version</td><td class="p-2.5 font-mono">1.4.0</td><td class="p-2.5">Current API schema version</td></tr>
+                            <tr><td class="p-2.5 font-mono text-blue-400">X-API-Version</td><td class="p-2.5 font-mono">1.5.0</td><td class="p-2.5">Current API schema version</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-Total-Songs</td><td class="p-2.5 font-mono">5778</td><td class="p-2.5">Total tracks in database</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-RateLimit-Limit</td><td class="p-2.5 font-mono">60</td><td class="p-2.5">Max requests allowed per minute per IP</td></tr>
                             <tr><td class="p-2.5 font-mono text-blue-400">X-RateLimit-Remaining</td><td class="p-2.5 font-mono">59</td><td class="p-2.5">Remaining request quota for current window</td></tr>
@@ -1220,7 +1235,6 @@ async def api_stats():
         "catbox_songs": catbox_count,
         "rate_limit_per_minute": DEFAULT_RATE_LIMIT,
         "status": "healthy",
-        "version": "1.4.0",
+        "version": "1.5.0",
         "hint": "Visit /docs for interactive developer guide and live scratchpad."
     }
-
